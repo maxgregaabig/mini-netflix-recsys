@@ -1,0 +1,38 @@
+# Serving configuration
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1
+
+retrieval:
+  top_k: 100
+
+ranking:
+  top_n: 20
+  rows:
+    top_picks: 10
+    because_you_watched: 10
+    trending: 10
+
+batching:
+  max_wait_ms: 10
+  max_batch_size: 64
+
+backpressure:
+  max_queue_depth: 100
+  max_concurrent_requests: 50
+  request_timeout_ms: 2000
+
+cache:
+  user_features_ttl: 600        # 10 minutes
+  user_embedding_ttl: 600       # 10 minutes
+  response_ttl: 30              # 30 seconds
+
+diversity:
+  max_same_genre: 3             # max items from same genre in a row
+
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0

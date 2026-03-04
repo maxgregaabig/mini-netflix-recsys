@@ -1,0 +1,43 @@
+# Feature definitions for the mini feature store
+
+user_features:
+  - name: user_watch_count_30d
+    dtype: int64
+    description: "Number of items watched in the last 30 days"
+
+  - name: user_genre_affinity
+    dtype: json
+    description: "Normalized genre watch counts as a dict {genre: score}"
+
+  - name: user_mean_rating
+    dtype: float64
+    description: "Mean rating given by the user"
+
+  - name: user_recency_mean_days
+    dtype: float64
+    description: "Mean days since user's recent watches"
+
+item_features:
+  - name: item_watch_count
+    dtype: int64
+    description: "Total number of watches (popularity)"
+
+  - name: genres
+    dtype: json
+    description: "List of genres for the item"
+
+  - name: genres_multihot
+    dtype: json
+    description: "Multi-hot genre encoding"
+
+  - name: item_mean_rating
+    dtype: float64
+    description: "Mean rating received by the item"
+
+redis_keys:
+  user_features_prefix: "uf:"
+  item_features_prefix: "if:"
+  user_embedding_prefix: "ue:"
+
+materialization:
+  batch_size: 500

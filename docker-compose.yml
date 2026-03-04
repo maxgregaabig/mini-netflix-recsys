@@ -1,0 +1,78 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATA_DIR=data
+      - CONFIG_DIR=configs
+    volumes:
+      - ./data:/app/data
+      - ./configs:/app/configs
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: uvicorn src.serving.app:app --host 0.0.0.0 --port 8000
+
+  demo:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      - api
+    command: >
+      pip install streamlit &&
+      streamlit run src/demo/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+    profiles:
+      - demo
+
+  trainer:
+    build: .
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATA_DIR=data
+      - CONFIG_DIR=configs
+    volumes:
+      - ./data:/app/data
+      - ./configs:/app/configs
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      bash -c "
+        python -m src.data_prep.download_movielens &&
+        python -m src.data_prep.prepare_events &&
+        python -m src.data_prep.split_train_valid_test &&
+        python -m src.features.build_offline_features &&
+        python -m src.features.materialize_to_redis &&
+        python -m src.retrieval.train_retrieval &&
+        python -m src.retrieval.embed_users_items &&
+        python -m src.retrieval.build_faiss_index &&
+        python -m src.ranking.build_ranking_dataset &&
+        python -m src.ranking.train_ranker &&
+        python -m src.evaluation.offline_eval &&
+        python -m src.evaluation.ab_simulation &&
+        echo 'Training pipeline complete!'
+      "
+    profiles:
+      - train
+
+volumes:
+  redis_data:

@@ -1,0 +1,41 @@
+# Recommendation system configuration
+
+data:
+  movielens_url: "https://files.grouplens.org/datasets/movielens/ml-latest-small.zip"
+  data_dir: "data"
+  positive_threshold: 4.0
+  negative_threshold: 2.5
+  train_ratio: 0.7
+  valid_ratio: 0.15
+  test_ratio: 0.15
+
+retrieval:
+  embedding_dim: 64
+  hidden_dim: 128
+  num_epochs: 15
+  batch_size: 1024
+  learning_rate: 0.001
+  num_negatives: 4          # in-batch negatives multiplier
+  top_k: 100
+  margin: 1.0               # BPR margin
+
+ranking:
+  num_candidates: 100
+  num_negatives: 10
+  lgbm_params:
+    objective: "lambdarank"
+    metric: "ndcg"
+    eval_at: [5, 10, 20]
+    num_leaves: 63
+    learning_rate: 0.05
+    n_estimators: 200
+    min_child_samples: 10
+    subsample: 0.8
+    colsample_bytree: 0.8
+    verbose: -1
+
+evaluation:
+  recall_at_k: [10, 20, 50]
+  ndcg_at_k: [5, 10, 20]
+  ab_num_users: 200
+  ab_bootstrap_iterations: 1000
