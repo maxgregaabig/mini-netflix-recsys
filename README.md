@@ -4,6 +4,21 @@ A production-style recommendation system with **two-stage retrieval + ranking**,
 
 Built with PyTorch, LightGBM, FAISS, FastAPI, and Redis on MovieLens data.
 
+> This project is about the **serving system**, not chasing accuracy on a toy dataset — it implements the production patterns (two-stage funnel, feature store with skew checks, dynamic batching, backpressure, multi-layer caching, Prometheus observability) that real recommenders at Netflix/YouTube/Spotify scale rely on, built small enough to run on a laptop.
+
+## Highlights
+
+- **Two-stage funnel** — a PyTorch two-tower retriever (FAISS ANN, **<5ms** top-100 candidate lookup) feeding a LightGBM LambdaRank re-ranker.
+- **~45ms end-to-end** per recommendation request, served from FastAPI.
+- **Mini feature store** — offline Parquet → online Redis, with an explicit **training/serving skew check** (a top cause of real ML system failures) and in-memory fallback.
+- **Dynamic batching** — concurrent ranking requests are merged into single LightGBM predict calls via asyncio futures.
+- **Backpressure** — concurrency semaphore + queue-depth limit return HTTP 429 instead of cascading failure under load.
+- **Observability** — per-stage latency histograms, cache hit rates, and queue depth exported to Prometheus.
+- **Load tested** — async + Locust harnesses report p50/p95/p99 latency and throughput.
+- ~3,200 lines of Python across 35 modules, with a pytest suite spanning data, features, retrieval, ranking, and serving.
+
+> Evaluation reports (Recall@K, NDCG@K, A/B simulation) are written to `data/reports/` and described under [Reports & Metrics](#reports--metrics). Numbers are on MovieLens-100K with a strict per-user temporal split — a deliberately hard, sparse setup; the point is the end-to-end pipeline and serving stack, not leaderboard accuracy.
+
 ## System Architecture
 
 ```
