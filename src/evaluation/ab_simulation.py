@@ -102,20 +102,26 @@ def run_ab_simulation() -> dict:
 
     control_mean = float(np.mean(control_arr))
     treatment_mean = float(np.mean(treatment_arr))
-    lift = (treatment_mean - control_mean) / max(control_mean, 1e-8)
 
-    # Bootstrap for CI on lift
-    lifts = []
+    # Significance is based on the ABSOLUTE difference in mean NDCG@10, which is
+    # numerically stable. Relative lift is reported only as a point estimate for
+    # context: bootstrapping it would divide by per-resample control means that can
+    # be ~0 on this sparse dataset, producing exploding, meaningless CI bounds.
+    abs_lift = treatment_mean - control_mean
+
+    # Bootstrap for CI on the absolute difference of means
+    abs_lifts = []
     for _ in range(n_bootstrap):
         c_sample = rng.choice(control_arr, size=len(control_arr), replace=True)
         t_sample = rng.choice(treatment_arr, size=len(treatment_arr), replace=True)
-        c_m = np.mean(c_sample)
-        t_m = np.mean(t_sample)
-        lifts.append((t_m - c_m) / max(c_m, 1e-8))
+        abs_lifts.append(float(np.mean(t_sample) - np.mean(c_sample)))
 
-    lifts = np.array(lifts)
-    ci_lower = float(np.percentile(lifts, 2.5))
-    ci_upper = float(np.percentile(lifts, 97.5))
+    abs_lifts = np.array(abs_lifts)
+    ci_lower = float(np.percentile(abs_lifts, 2.5))
+    ci_upper = float(np.percentile(abs_lifts, 97.5))
+
+    # Relative lift point estimate (None when control is too small to be meaningful)
+    relative_lift = round(abs_lift / control_mean, 4) if control_mean > 1e-6 else None
 
     report = {
         "control": {
@@ -126,8 +132,9 @@ def run_ab_simulation() -> dict:
             "n_users": len(treatment_ndcg_10),
             "mean_ndcg_10": round(treatment_mean, 4),
         },
-        "lift": round(lift, 4),
-        "bootstrap_ci_95": [round(ci_lower, 4), round(ci_upper, 4)],
+        "abs_lift_ndcg_10": round(abs_lift, 4),
+        "abs_lift_ci_95": [round(ci_lower, 4), round(ci_upper, 4)],
+        "relative_lift": relative_lift,
         "significant": ci_lower > 0,
     }
 
